@@ -1,0 +1,42 @@
+name: DACH Senderliste aktualisieren
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: DACH-Listen herunterladen und zusammenführen
+        run: |
+          curl -L --fail -o de.m3u https://iptv-org.github.io/iptv/countries/de.m3u
+          curl -L --fail -o at.m3u https://iptv-org.github.io/iptv/countries/at.m3u
+          curl -L --fail -o ch.m3u https://iptv-org.github.io/iptv/countries/ch.m3u
+
+          echo "#EXTM3U" > DACH_Sender_VLC.m3u
+
+          echo "# ===== Deutschland =====" >> DACH_Sender_VLC.m3u
+          tail -n +2 de.m3u >> DACH_Sender_VLC.m3u
+
+          echo "# ===== Österreich =====" >> DACH_Sender_VLC.m3u
+          tail -n +2 at.m3u >> DACH_Sender_VLC.m3u
+
+          echo "# ===== Schweiz =====" >> DACH_Sender_VLC.m3u
+          tail -n +2 ch.m3u >> DACH_Sender_VLC.m3u
+
+      - name: Änderungen speichern
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add DACH_Sender_VLC.m3u
+          git diff --cached --quiet || git commit -m "DACH Senderliste automatisch aktualisiert"
+          git push
